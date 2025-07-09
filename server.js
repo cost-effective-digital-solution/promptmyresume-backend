@@ -18,7 +18,8 @@ app.get("/", (req, res) => {
 app.post("/api/generate", async (req, res) => {
   const data = req.body;
 
-  // Setup mailer
+  console.log("Received form data:", data);
+
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
@@ -35,10 +36,10 @@ app.post("/api/generate", async (req, res) => {
   };
 
   try {
-    // Send notification email
+    console.log("Sending email notification...");
     await transporter.sendMail(mailOptions);
+    console.log("Email sent successfully.");
 
-    // Compose DeepSeek prompt
     const prompt = `Create a professional, ATS-friendly resume and cover letter:\n
     Name: ${data.fullName}\n
     Job Title: ${data.jobTitle}\n
@@ -51,6 +52,7 @@ app.post("/api/generate", async (req, res) => {
     Strengths: ${data.strengths || 'General'}\n
     Ensure the output includes both a resume and a tailored cover letter.`;
 
+    console.log("Calling DeepSeek API...");
     const response = await axios.post("https://api.deepseek.com/v1/completions", {
       model: "deepseek-chat",
       messages: [{ role: "user", content: prompt }],
@@ -69,11 +71,22 @@ app.post("/api/generate", async (req, res) => {
       return res.status(500).json({ error: "AI generation failed. Please try again." });
     }
 
+    console.log("AI generation successful. Sending response...");
     res.json({ result });
 
   } catch (error) {
     console.error("Error during processing:", error.message);
-    if (error.response?.data) console.error("API response error:", error.response.data);
+
+    if (error.response) {
+      console.error("Status:", error.response.status);
+      console.error("Headers:", error.response.headers);
+      console.error("Data:", error.response.data);
+    } else if (error.request) {
+      console.error("No response received. Request was:", error.request);
+    } else {
+      console.error("Unexpected Error:", error);
+    }
+
     res.status(500).json({ error: "Something went wrong on the server." });
   }
 });
