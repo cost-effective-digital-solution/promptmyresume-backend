@@ -53,13 +53,18 @@ app.post("/api/generate", async (req, res) => {
     Ensure the output includes both a resume and a tailored cover letter.`;
 
     console.log("Calling DeepSeek API...");
-    const response = await axios.post("https://api.deepseek.com/v1/completions", {
+    const response = await axios.post("https://api.deepseek.com/v1/chat/completions", {
       model: "deepseek-chat",
-      messages: [{ role: "user", content: prompt }],
+      messages: [
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
       temperature: 0.7
     }, {
       headers: {
-        "Authorization": `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+        Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
         "Content-Type": "application/json"
       }
     });
