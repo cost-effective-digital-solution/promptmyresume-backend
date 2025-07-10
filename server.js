@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(bodyParser.json());
 
-// Function to generate AI-powered content (resume + cover letter)
+// Generate detailed Resume + Cover Letter from DeepSeek AI
 async function getAIResumeAndCoverLetter(formData) {
   try {
     const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
@@ -24,16 +24,67 @@ async function getAIResumeAndCoverLetter(formData) {
         messages: [
           {
             role: "user",
-            content: `You are an expert resume and cover letter writer. Based on the following user profile, write a complete professional resume and a tailored cover letter for the desired job. Respond in two sections clearly labeled "Resume" and "Cover Letter".\n
-Full Name: ${formData.fullName}
-Job Title: ${formData.jobTitle}
-Experience: ${formData.experienceLevel}
-Skills: ${formData.skills}
-Achievements: ${formData.achievements}
-Tone: ${formData.tone}
-Target Company: ${formData.companyName}
-Motivation: ${formData.motivation}
-Strengths: ${formData.strengths}`
+            content: `You are a certified resume and cover letter writing expert with deep understanding of ATS standards and global hiring expectations. Based on the provided profile, generate:
+
+1. A **professionally formatted, ATS-friendly resume** with clearly defined sections including:
+   - Title: Resume (center-aligned and bold)
+   - Full Name and Contact Info (email optional)
+   - Professional Summary
+   - Skills
+   - Professional Experience (with job titles, companies, dates, responsibilities, and achievements)
+   - Education
+   - Additional Sections (if relevant: Certifications, Languages, Projects, etc.)
+
+2. A **tailored and compelling cover letter**, addressed to the hiring manager at the specified company, matching the tone and target role. The cover letter should:
+   - Include a greeting
+   - Mention the job title and company
+   - Reflect motivation, strengths, and achievements
+   - Close with a call to action and thank you
+
+Format the output with **two distinct, clearly separated sections**, using proper line spacing, professional layout, and bold section titles (no asterisks, symbols, or markdown code).
+
+---
+
+Resume
+[Insert ATS-formatted resume with proper headings and bold titles]
+
+---
+
+Cover Letter
+[Insert cover letter here, properly spaced and structured in paragraph form]
+
+---
+
+Profile Information:
+- Full Name: ${formData.fullName}
+- Job Title: ${formData.jobTitle}
+- Experience Level: ${formData.experienceLevel}
+- Skills: ${formData.skills}
+- Achievements: ${formData.achievements}
+- Tone: ${formData.tone}
+- Target Company: ${formData.companyName}
+- Motivation: ${formData.motivation}
+- Strengths: ${formData.strengths}`
+
+1. A **professional ATS-friendly resume** using real sections (Summary, Skills, Experience, Education, etc.)
+2. A **tailored cover letter** addressed to the hiring manager of the specified company.
+
+Please format the output in **two clear sections**:
+### Resume
+[...]
+### Cover Letter
+[...]
+
+Profile Information:
+- Full Name: ${formData.fullName}
+- Job Title: ${formData.jobTitle}
+- Experience: ${formData.experienceLevel}
+- Skills: ${formData.skills}
+- Achievements: ${formData.achievements}
+- Tone: ${formData.tone}
+- Target Company: ${formData.companyName}
+- Motivation: ${formData.motivation}
+- Strengths: ${formData.strengths}`
           }
         ]
       })
@@ -47,7 +98,7 @@ Strengths: ${formData.strengths}`
   }
 }
 
-// Function to send notification email
+// Send email notification
 async function sendNotificationEmail(formData) {
   const transporter = nodemailer.createTransport({
     service: "gmail",
@@ -72,7 +123,7 @@ async function sendNotificationEmail(formData) {
   }
 }
 
-// PDF Generation Endpoint
+// PDF Generation Route
 app.post("/api/generate", async (req, res) => {
   const data = req.body;
 
@@ -100,7 +151,7 @@ app.post("/api/generate", async (req, res) => {
   doc.text(`Motivation: ${data.motivation || "N/A"}`);
   doc.text(`Strengths: ${data.strengths || "N/A"}`);
 
-  doc.moveDown().fontSize(14).text("🧠 AI-Generated Resume + Cover Letter", { underline: true });
+  doc.moveDown().fontSize(14).text("🧠 AI-Generated Resume & Cover Letter", { underline: true });
   doc.moveDown().fontSize(12).text(
     aiContent.replace(/\*\*/g, '').replace(/\\n/g, '\n').replace(/\n/g, '\n').trim(),
     { lineBreak: true }
