@@ -3,7 +3,6 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const PDFDocument = require('pdfkit');
-const fetch = require('node-fetch');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -15,7 +14,7 @@ async function getAIResumeContent(formData) {
     const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": "Bearer YOUR_API_KEY_HERE",
+        "Authorization": `Bearer ${process.env.DEEPSEEK_API_KEY}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
