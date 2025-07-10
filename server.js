@@ -1,29 +1,64 @@
+
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const PDFDocument = require('pdfkit');
+const fetch = require('node-fetch');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(bodyParser.json());
 
-app.post("/api/generate", (req, res) => {
-  const data = req.body;
-  const doc = new PDFDocument();
+async function getAIResumeContent(formData) {
+  try {
+    const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer YOUR_API_KEY_HERE",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "deepseek-chat",
+        messages: [
+          {
+            role: "user",
+            content: `Generate a professional resume summary for the following candidate:\n
+Full Name: ${formData.fullName}
+Job Title: ${formData.jobTitle}
+Experience: ${formData.experienceLevel}
+Skills: ${formData.skills}
+Achievements: ${formData.achievements}
+Tone: ${formData.tone}
+Company: ${formData.companyName}
+Motivation: ${formData.motivation}
+Strengths: ${formData.strengths}`
+          }
+        ]
+      })
+    });
 
-  // Suggesting a default filename
+    const result = await response.json();
+    return result.choices?.[0]?.message?.content || "AI content could not be generated.";
+  } catch (err) {
+    console.error("AI generation error:", err);
+    return "Error generating AI content.";
+  }
+}
+
+app.post("/api/generate", async (req, res) => {
+  const data = req.body;
+  const aiContent = await getAIResumeContent(data);
+
+  const doc = new PDFDocument();
   const filename = `${(data.fullName || "resume").replace(/\s+/g, "_")}.pdf`;
 
-  // Set headers for download
   res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
   res.setHeader("Content-Type", "application/pdf");
 
-  // Pipe the generated PDF to the response
   doc.pipe(res);
 
-  // Add content to the PDF
-  doc.fontSize(20).text("PromptMyResume: Generated Resume", { align: 'center' });
+  doc.fontSize(20).text("PromptMyResume: AI-Powered Resume", { align: 'center' });
   doc.moveDown();
   doc.fontSize(12);
   doc.text(`Full Name: ${data.fullName || "N/A"}`);
@@ -37,7 +72,9 @@ app.post("/api/generate", (req, res) => {
   doc.text(`Motivation: ${data.motivation || "N/A"}`);
   doc.text(`Strengths: ${data.strengths || "N/A"}`);
 
-  // Finalize PDF
+  doc.moveDown().fontSize(14).text("🔍 AI-Generated Summary:", { underline: true });
+  doc.moveDown().fontSize(12).text(aiContent || "No AI content generated.");
+
   doc.end();
 });
 
