@@ -38,7 +38,7 @@ Strengths: ${formData.strengths}`
     });
 
     const result = await response.json();
-    return result.choices?.[0]?.message?.content || "AI content could not be generated.";
+    return result.choices?.[0]?.message?.content.trim() || "AI content could not be generated.";
   } catch (err) {
     console.error("AI generation error:", err);
     return "Error generating AI content.";
@@ -72,7 +72,14 @@ app.post("/api/generate", async (req, res) => {
   doc.text(`Strengths: ${data.strengths || "N/A"}`);
 
   doc.moveDown().fontSize(14).text("🔍 AI-Generated Summary:", { underline: true });
-  doc.moveDown().fontSize(12).text(aiContent || "No AI content generated.");
+  doc.moveDown().fontSize(12).text(
+    (aiContent || "No AI content generated.")
+      .replace(/\*\*/g, '')       // remove markdown bold
+      .replace(/\\n/g, '\n')     // unescape escaped newlines
+      .replace(/\n/g, '\n')       // normalize newlines
+      .trim(),
+    { lineBreak: true }
+  );
 
   doc.end();
 });
