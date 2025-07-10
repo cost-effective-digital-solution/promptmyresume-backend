@@ -13,10 +13,9 @@ app.use(bodyParser.json());
 app.post('/api/generate', async (req, res) => {
   const formData = req.body;
 
-  const prompt = `
-You are a certified resume and cover letter writing expert with deep understanding of ATS standards and global hiring expectations. Based on the provided profile, generate:
+ const prompt = `You are a certified resume and cover letter writing expert with deep understanding of ATS standards and global hiring expectations. Based on the provided profile, generate:
 
-1. A professionally formatted, ATS-friendly resume with clearly defined sections including:
+1. A *professionally formatted, ATS-friendly resume* with clearly defined sections including:
    - Title: Resume (center-aligned and bold)
    - Full Name and Contact Info (email optional)
    - Professional Summary
@@ -25,13 +24,13 @@ You are a certified resume and cover letter writing expert with deep understandi
    - Education
    - Additional Sections (if relevant: Certifications, Languages, Projects, etc.)
 
-2. A tailored and compelling cover letter, addressed to the hiring manager at the specified company, matching the tone and target role. The cover letter should:
+2. A **tailored and compelling cover letter**, addressed to the hiring manager at the specified company, matching the tone and target role. The cover letter should:
    - Include a greeting
    - Mention the job title and company
    - Reflect motivation, strengths, and achievements
    - Close with a call to action and thank you
 
-Format the output with two distinct, clearly separated sections, using proper line spacing, professional layout, and bold section titles (no asterisks, symbols, or markdown code).
+Format the output with **two distinct, clearly separated sections**, using proper line spacing, professional layout, and bold section titles (no asterisks, symbols, or markdown code).
 
 ---
 
@@ -54,8 +53,7 @@ Profile Information:
 - Tone: ${formData.tone}
 - Target Company: ${formData.companyName}
 - Motivation: ${formData.motivation}
-- Strengths: ${formData.strengths}
-`;
+- Strengths: ${formData.strengths}`;
 
   // Simulating resume and cover letter generation (replace with actual AI call)
   const generatedContent = prompt.replace(/\$\{(.*?)\}/g, (_, key) => formData[key.trim()] || '');
