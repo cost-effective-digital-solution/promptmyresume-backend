@@ -1,10 +1,10 @@
-
 const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const PDFDocument = require("pdfkit");
 const fs = require("fs");
 const nodemailer = require("nodemailer");
+const axios = require("axios");
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -15,27 +15,27 @@ app.use(bodyParser.json());
 app.post("/api/generate", async (req, res) => {
   const data = req.body;
 
-  const prompt = `You are a certified resume and cover letter writing expert with deep understanding of ATS standards and global hiring expectations. Based on the provided profile, generate:
+  const prompt = `
+You are a certified resume and cover letter writing expert with deep understanding of ATS standards and global hiring expectations. Based on the provided profile, generate:
 
 1. A professionally formatted, ATS-friendly resume with clearly defined sections including:
-   - Title: Resume (center-aligned and bold)
-   - Full Name and Contact Info (email optional)
-   - Professional Summary
-   - Skills
-   - Professional Experience (with job titles, companies, dates, responsibilities, and achievements)
-   - Education
-   - Additional Sections (if relevant: Certifications, Languages, Projects, etc.)
+- Title: Resume (center-aligned and bold)
+- Full Name and Contact Info (email optional)
+- Professional Summary
+- Skills
+- Professional Experience (with job titles, companies, dates, responsibilities, and achievements)
+- Education
+- Additional Sections (if relevant: Certifications, Languages, Projects, etc.)
 
 2. A tailored and compelling cover letter, addressed to the hiring manager at the specified company, matching the tone and target role. The cover letter should:
-   - Include a greeting
-   - Mention the job title and company
-   - Reflect motivation, strengths, and achievements
-   - Close with a call to action and thank you
+- Include a greeting
+- Mention the job title and company
+- Reflect motivation, strengths, and achievements
+- Close with a call to action and thank you
 
-Format the output with two distinct, clearly separated sections, using proper line spacing, professional layout, and bold section titles (no asterisks, symbols, or markdown code).
+Format the output with two distinct, clearly separated sections, using proper line spacing, professional layout, and bold section titles.
 
 ---
-
 Profile Information:
 - Full Name: ${data.fullName}
 - Job Title: ${data.jobTitle}
@@ -48,6 +48,33 @@ Profile Information:
 - Strengths: ${data.strengths}
 `;
 
+  let aiContent = "AI generation failed. Please try again later.";
+
+  try {
+    const aiResponse = await axios.post(
+      "https://api.deepseek.com/v1/chat/completions",
+      {
+        model: "deepseek-chat",
+        messages: [
+          { role: "system", content: "You are a professional resume and cover letter writer." },
+          { role: "user", content: prompt }
+        ],
+        temperature: 0.7
+      },
+      {
+        headers: {
+          Authorization: `sk-ea2891b5ea45401f9d58208388c0bcfd`, // <<-- REPLACE with your key
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    aiContent = aiResponse.data.choices[0].message.content || aiContent;
+  } catch (error) {
+    console.error("❌ DeepSeek Error:", error.message);
+  }
+
+  // PDF Generation
   const doc = new PDFDocument();
   let filename = encodeURIComponent(data.fullName || "resume") + ".pdf";
 
@@ -72,17 +99,17 @@ Profile Information:
   doc.text("Strengths: " + (data.strengths || "N/A"));
 
   doc.moveDown();
-  doc.fontSize(14).text("AI-Generated Summary:", { underline: true });
-  doc.fontSize(12).text("Coming Soon..."); // Simulated for now
+  doc.fontSize(14).text("AI-Generated Resume & Cover Letter:", { underline: true });
+  doc.fontSize(12).text(aiContent);
 
   doc.end();
 
-  // Simulate email
+  // Email Notification
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
       user: "costeffectivedigitalsolution@gmail.com",
-      pass: "your-email-password" // Use app-specific password
+      pass: "wjlpzvapvkahoucc" // Use Gmail App Password
     }
   });
 
@@ -101,7 +128,7 @@ PromptMyResume`
   try {
     await transporter.sendMail(mailOptions);
   } catch (error) {
-    console.error("Email failed:", error.message);
+    console.error("📧 Email failed:", error.message);
   }
 });
 
