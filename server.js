@@ -1,41 +1,41 @@
-const express = require("express");
-const cors = require("cors");
-const bodyParser = require("body-parser");
-const PDFDocument = require("pdfkit");
-const fs = require("fs");
-const nodemailer = require("nodemailer");
-const axios = require("axios");
+    const express = require("express");
+    const cors = require("cors");
+    const bodyParser = require("body-parser");
+    const PDFDocument = require("pdfkit");
+    const fs = require("fs");
+    const axios = require("axios");
+    const nodemailer = require("nodemailer");
 
-const app = express();
-const PORT = process.env.PORT || 10000;
+    const app = express();
+    const PORT = process.env.PORT || 10000;
 
-app.use(cors());
-app.use(bodyParser.json());
+    app.use(cors());
+    app.use(bodyParser.json());
 
-app.post("/api/generate", async (req, res) => {
-  const data = req.body;
+    app.post("/api/generate", async (req, res) => {
+      const data = req.body;
 
-  const prompt = `
-You are a certified resume and cover letter writing expert with deep understanding of ATS standards and global hiring expectations. Based on the provided profile, generate:
+      const prompt = `You are a certified resume and cover letter writing expert with deep understanding of ATS standards and global hiring expectations. Based on the provided profile, generate:
 
 1. A professionally formatted, ATS-friendly resume with clearly defined sections including:
-- Title: Resume (center-aligned and bold)
-- Full Name and Contact Info (email optional)
-- Professional Summary
-- Skills
-- Professional Experience (with job titles, companies, dates, responsibilities, and achievements)
-- Education
-- Additional Sections (if relevant: Certifications, Languages, Projects, etc.)
+   - Title: Resume (center-aligned and bold)
+   - Full Name and Contact Info (email optional)
+   - Professional Summary
+   - Skills
+   - Professional Experience (with job titles, companies, dates, responsibilities, and achievements)
+   - Education
+   - Additional Sections (if relevant: Certifications, Languages, Projects, etc.)
 
 2. A tailored and compelling cover letter, addressed to the hiring manager at the specified company, matching the tone and target role. The cover letter should:
-- Include a greeting
-- Mention the job title and company
-- Reflect motivation, strengths, and achievements
-- Close with a call to action and thank you
+   - Include a greeting
+   - Mention the job title and company
+   - Reflect motivation, strengths, and achievements
+   - Close with a call to action and thank you
 
 Format the output with two distinct, clearly separated sections, using proper line spacing, professional layout, and bold section titles.
 
 ---
+
 Profile Information:
 - Full Name: ${data.fullName}
 - Job Title: ${data.jobTitle}
@@ -45,93 +45,80 @@ Profile Information:
 - Tone: ${data.tone}
 - Target Company: ${data.companyName}
 - Motivation: ${data.motivation}
-- Strengths: ${data.strengths}
-`;
+- Strengths: ${data.strengths}`;
 
-  let aiContent = "AI generation failed. Please try again later.";
+      let aiContent = "AI generation failed. Please try again later.";
 
-  try {
-    const aiResponse = await axios.post(
-      "https://api.deepseek.com/v1/chat/completions",
-      {
-        model: "deepseek-chat",
-        messages: [
-          { role: "system", content: "You are a professional resume and cover letter writer." },
-          { role: "user", content: prompt }
-        ],
-        temperature: 0.7
-      },
-      {
-        headers: {
-          Authorization: `sk-ea2891b5ea45401f9d58208388c0bcfd`, // <<-- REPLACE with your key
-          "Content-Type": "application/json"
-        }
+      try {
+        const response = await axios.post("https://api.deepseek.com/v1/chat/completions", {
+          model: "deepseek-chat",
+          messages: [
+            { role: "system", content: "You are a professional resume and cover letter writer." },
+            { role: "user", content: prompt }
+          ]
+        }, {
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${process.env.KEY}`
+          }
+        });
+
+        aiContent = response.data.choices[0].message.content || aiContent;
+      } catch (error) {
+        console.error("AI generation error:", error.message);
       }
-    );
 
-    aiContent = aiResponse.data.choices[0].message.content || aiContent;
-  } catch (error) {
-    console.error("❌ DeepSeek Error:", error.message);
-  }
+      const doc = new PDFDocument();
+      let filename = encodeURIComponent(data.fullName || "resume") + ".pdf";
 
-  // PDF Generation
-  const doc = new PDFDocument();
-  let filename = encodeURIComponent(data.fullName || "resume") + ".pdf";
+      res.setHeader("Content-disposition", 'attachment; filename="' + filename + '"');
+      res.setHeader("Content-type", "application/pdf");
 
-  res.setHeader("Content-disposition", 'attachment; filename="' + filename + '"');
-  res.setHeader("Content-type", "application/pdf");
+      doc.pipe(res);
 
-  doc.pipe(res);
+      doc.fontSize(18).text("PromptMyResume: AI-Powered Resume", { align: "center" });
+      doc.moveDown();
 
-  doc.fontSize(18).text("PromptMyResume: AI-Powered Resume", { align: "center" });
-  doc.moveDown();
+      doc.fontSize(12);
+      doc.text("Full Name: " + (data.fullName || "N/A"));
+      doc.text("Email: " + (data.email || "N/A"));
+      doc.text("Job Title: " + (data.jobTitle || "N/A"));
+      doc.text("Experience Level: " + (data.experienceLevel || "N/A"));
+      doc.text("Skills: " + (data.skills || "N/A"));
+      doc.text("Achievements: " + (data.achievements || "N/A"));
+      doc.text("Tone: " + (data.tone || "N/A"));
+      doc.text("Company: " + (data.companyName || "N/A"));
+      doc.text("Motivation: " + (data.motivation || "N/A"));
+      doc.text("Strengths: " + (data.strengths || "N/A"));
 
-  doc.fontSize(12);
-  doc.text("Full Name: " + (data.fullName || "N/A"));
-  doc.text("Email: " + (data.email || "N/A"));
-  doc.text("Job Title: " + (data.jobTitle || "N/A"));
-  doc.text("Experience Level: " + (data.experienceLevel || "N/A"));
-  doc.text("Skills: " + (data.skills || "N/A"));
-  doc.text("Achievements: " + (data.achievements || "N/A"));
-  doc.text("Tone: " + (data.tone || "N/A"));
-  doc.text("Company: " + (data.companyName || "N/A"));
-  doc.text("Motivation: " + (data.motivation || "N/A"));
-  doc.text("Strengths: " + (data.strengths || "N/A"));
+      doc.moveDown();
+      doc.fontSize(14).text("AI-Generated Resume & Cover Letter:", { underline: true });
+      doc.fontSize(12).text(aiContent);
 
-  doc.moveDown();
-  doc.fontSize(14).text("AI-Generated Resume & Cover Letter:", { underline: true });
-  doc.fontSize(12).text(aiContent);
+      doc.end();
 
-  doc.end();
+      const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+          user: "costeffectivedigitalsolution@gmail.com",
+          pass: "your-email-password"
+        }
+      });
 
-  // Email Notification
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: "costeffectivedigitalsolution@gmail.com",
-      pass: "wjlpzvapvkahoucc" // Use Gmail App Password
-    }
-  });
+      const mailOptions = {
+        from: "costeffectivedigitalsolution@gmail.com",
+        to: data.email || "costeffectivedigitalsolution@gmail.com",
+        subject: "Resume & Cover Letter Generated",
+        text: `Hi ${data.fullName},\n\nYour resume and cover letter have been successfully generated.\n\nBest,\nPromptMyResume`
+      };
 
-  const mailOptions = {
-    from: "costeffectivedigitalsolution@gmail.com",
-    to: data.email || "costeffectivedigitalsolution@gmail.com",
-    subject: "Resume & Cover Letter Generated",
-    text: `Hi ${data.fullName},
+      try {
+        await transporter.sendMail(mailOptions);
+      } catch (error) {
+        console.error("Email failed:", error.message);
+      }
+    });
 
-Your resume and cover letter have been successfully generated.
-
-Best,
-PromptMyResume`
-  };
-
-  try {
-    await transporter.sendMail(mailOptions);
-  } catch (error) {
-    console.error("📧 Email failed:", error.message);
-  }
-});
-
-app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-});
+    app.listen(PORT, () => {
+      console.log(`✅ Server running on port ${PORT}`);
+    });
