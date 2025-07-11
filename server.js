@@ -1,8 +1,10 @@
+
 const express = require("express");
-const bodyParser = require("body-parser");
 const cors = require("cors");
-const nodemailer = require("nodemailer");
+const bodyParser = require("body-parser");
 const PDFDocument = require("pdfkit");
+const fs = require("fs");
+const nodemailer = require("nodemailer");
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -11,92 +13,96 @@ app.use(cors());
 app.use(bodyParser.json());
 
 app.post("/api/generate", async (req, res) => {
-  const formData = req.body;
+  const data = req.body;
 
-  // ------------------ 1. PROMPT GENERATION ------------------
-  const prompt = `
-You are a certified resume and cover letter writing expert with deep understanding of ATS standards and global hiring expectations. Based on the provided profile, generate:
+  const prompt = `You are a certified resume and cover letter writing expert with deep understanding of ATS standards and global hiring expectations. Based on the provided profile, generate:
 
 1. A professionally formatted, ATS-friendly resume with clearly defined sections including:
    - Title: Resume (center-aligned and bold)
-   - Full Name and Contact Info
+   - Full Name and Contact Info (email optional)
    - Professional Summary
    - Skills
-   - Professional Experience
+   - Professional Experience (with job titles, companies, dates, responsibilities, and achievements)
    - Education
+   - Additional Sections (if relevant: Certifications, Languages, Projects, etc.)
 
-2. A tailored and compelling cover letter addressed to the hiring manager at the specified company.
+2. A tailored and compelling cover letter, addressed to the hiring manager at the specified company, matching the tone and target role. The cover letter should:
+   - Include a greeting
+   - Mention the job title and company
+   - Reflect motivation, strengths, and achievements
+   - Close with a call to action and thank you
 
----
-
-Resume
-${formData.fullName}
-${formData.jobTitle} | ${formData.experienceLevel || "N/A"}
-
-Professional Summary:
-Dedicated and skilled professional with experience in ${formData.skills}. Achievements include: ${formData.achievements}.
-
-Skills:
-${formData.skills}
-
-Experience:
-[Include your job history, roles, achievements]
-
-Education:
-[Insert your educational background]
+Format the output with two distinct, clearly separated sections, using proper line spacing, professional layout, and bold section titles (no asterisks, symbols, or markdown code).
 
 ---
 
-Cover Letter
-Dear Hiring Manager at ${formData.companyName || "your organization"},
+Profile Information:
+- Full Name: ${data.fullName}
+- Job Title: ${data.jobTitle}
+- Experience Level: ${data.experienceLevel}
+- Skills: ${data.skills}
+- Achievements: ${data.achievements}
+- Tone: ${data.tone}
+- Target Company: ${data.companyName}
+- Motivation: ${data.motivation}
+- Strengths: ${data.strengths}
+`;
 
-I am writing to express my interest in the ${formData.jobTitle} position. With ${formData.experienceLevel} experience and a passion for excellence, I bring ${formData.strengths || "value"}.
-
-${formData.motivation || "I'm excited to contribute to your company's success."}
-
-Sincerely,
-${formData.fullName}
-  `;
-
-  const cleanedOutput = prompt.replace(/\*\*/g, ""); // remove markdown if any
-
-  // ------------------ 2. CREATE PDF ------------------
   const doc = new PDFDocument();
-  const filename = `${formData.fullName || "resume"}.pdf`;
+  let filename = encodeURIComponent(data.fullName || "resume") + ".pdf";
 
-  res.setHeader("Content-disposition", `attachment; filename="${filename}"`);
+  res.setHeader("Content-disposition", 'attachment; filename="' + filename + '"');
   res.setHeader("Content-type", "application/pdf");
 
   doc.pipe(res);
 
-  // Format and print line by line
-  cleanedOutput.split("\n").forEach((line) => {
-    doc.text(line.trim());
-    doc.moveDown(0.5);
-  });
+  doc.fontSize(18).text("PromptMyResume: AI-Powered Resume", { align: "center" });
+  doc.moveDown();
+
+  doc.fontSize(12);
+  doc.text("Full Name: " + (data.fullName || "N/A"));
+  doc.text("Email: " + (data.email || "N/A"));
+  doc.text("Job Title: " + (data.jobTitle || "N/A"));
+  doc.text("Experience Level: " + (data.experienceLevel || "N/A"));
+  doc.text("Skills: " + (data.skills || "N/A"));
+  doc.text("Achievements: " + (data.achievements || "N/A"));
+  doc.text("Tone: " + (data.tone || "N/A"));
+  doc.text("Company: " + (data.companyName || "N/A"));
+  doc.text("Motivation: " + (data.motivation || "N/A"));
+  doc.text("Strengths: " + (data.strengths || "N/A"));
+
+  doc.moveDown();
+  doc.fontSize(14).text("AI-Generated Summary:", { underline: true });
+  doc.fontSize(12).text("Coming Soon..."); // Simulated for now
 
   doc.end();
 
-  // ------------------ 3. SEND EMAIL TO YOU ------------------
+  // Simulate email
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
       user: "costeffectivedigitalsolution@gmail.com",
-      pass: "wjlpzvapvkahoucc", // Use App Password, NOT Gmail password
-    },
+      pass: "your-email-password" // Use app-specific password
+    }
   });
 
   const mailOptions = {
-    from: "PromptMyResume <costeffectivedigitalsolution@gmail.com>",
-    to: "costeffectivedigitalsolution@gmail.com",
-    subject: `New Resume Generated by ${formData.fullName}`,
-    text: `Resume generated for ${formData.fullName} (${formData.email}).`,
+    from: "costeffectivedigitalsolution@gmail.com",
+    to: data.email || "costeffectivedigitalsolution@gmail.com",
+    subject: "Resume & Cover Letter Generated",
+    text: `Hi ${data.fullName},
+
+Your resume and cover letter have been successfully generated.
+
+Best,
+PromptMyResume`
   };
 
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error) console.error("Email Error:", error);
-    else console.log("Notification Email Sent:", info.response);
-  });
+  try {
+    await transporter.sendMail(mailOptions);
+  } catch (error) {
+    console.error("Email failed:", error.message);
+  }
 });
 
 app.listen(PORT, () => {
