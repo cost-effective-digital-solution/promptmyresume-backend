@@ -100,7 +100,7 @@ Profile Information:
     service: "gmail",
     auth: {
       user: "costeffectivedigitalsolution@gmail.com",
-      pass: process.env.GMAIL_APP_PASSWORD // Must be a Gmail App Password
+      pass: process.env.NOTIFY_PASS // Must be a Gmail App Password
     }
   });
 
