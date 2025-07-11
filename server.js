@@ -59,7 +59,7 @@ Profile Information:
         }, {
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${process.env.KEY}`
+           "Authorization": `Bearer ${process.env.DEEPSEEK_API_KEY}`
           }
         });
 
