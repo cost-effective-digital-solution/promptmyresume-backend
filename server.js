@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const PDFDocument = require("pdfkit");
+const fs = require("fs");
 const axios = require("axios");
 const nodemailer = require("nodemailer");
 
@@ -13,6 +14,7 @@ app.use(bodyParser.json());
 
 app.post("/api/generate", async (req, res) => {
   const data = req.body;
+  const notifyEmail = process.env.NOTIFY_EMAIL || "default@email.com";
 
   const prompt = `You are a certified resume and cover letter writing expert with deep understanding of ATS standards and global hiring expectations. Based on the provided profile, generate:
 
@@ -62,17 +64,17 @@ Profile Information:
       }
     });
 
-    aiContent = response.data.choices[0]?.message?.content || aiContent;
-    console.log("✅ AI response received.");
+    aiContent = response.data.choices[0].message.content || aiContent;
   } catch (error) {
-    console.error("❌ DeepSeek Error:", error.response?.data || error.message);
+    console.error("AI generation error:", error.message);
   }
 
   const doc = new PDFDocument();
-  const filename = encodeURIComponent(data.fullName || "resume") + ".pdf";
+  let filename = encodeURIComponent(data.fullName || "resume") + ".pdf";
 
-  res.setHeader("Content-disposition", `attachment; filename="${filename}"`);
+  res.setHeader("Content-disposition", 'attachment; filename="' + filename + '"');
   res.setHeader("Content-type", "application/pdf");
+
   doc.pipe(res);
 
   doc.fontSize(18).text("PromptMyResume: AI-Powered Resume", { align: "center" });
@@ -100,7 +102,7 @@ Profile Information:
     service: "gmail",
     auth: {
       user: "costeffectivedigitalsolution@gmail.com",
-      pass: process.env.NOTIFY_PASS // Must be a Gmail App Password
+      pass: process.env.NOTIFY_PASS
     }
   });
 
@@ -111,14 +113,22 @@ Profile Information:
     text: `Hi ${data.fullName},\n\nYour resume and cover letter have been successfully generated.\n\nBest,\nPromptMyResume`
   };
 
+  const adminNotification = {
+    from: "costeffectivedigitalsolution@gmail.com",
+    to: notifyEmail,
+    subject: `\uD83D\uDCE8 New Resume Request from ${data.fullName}`,
+    text: `A new resume generation request has been received:\n\nFull Name: ${data.fullName}\nEmail: ${data.email}\nJob Title: ${data.jobTitle}\nExperience Level: ${data.experienceLevel}\nCompany: ${data.companyName}\n\nTimestamp: ${new Date().toLocaleString()}`
+  };
+
   try {
     await transporter.sendMail(mailOptions);
-    console.log("📧 Notification Email Sent");
+    await transporter.sendMail(adminNotification);
+    console.log(`\u2709\uFE0F Emails sent successfully.`);
   } catch (error) {
-    console.error("❌ Email failed:", error.message);
+    console.error("Email failed:", error.message);
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`\u2705 Server running on port ${PORT}`);
 });
